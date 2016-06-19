@@ -7,7 +7,7 @@ import java.io.Serializable;
  * Saves the score to a .txt file.
  * Imports the score if a .txt file can be found.
  * 
- * @author Larry Preuetts
+ * @author Larry Preuett
  * @version 1.0
  */
 public class HighScore implements Serializable {
