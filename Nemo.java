@@ -5,26 +5,48 @@ import java.awt.Toolkit;
 
 import SwimmyFish.graphics.GameDriver;
 
+/**
+ * Creates the fish and allows it to swim.
+ * Allows the fish to accelerate and to fall
+ * with gravity.
+ * 
+ * @author Zane Guess, Larry Preuett, and Morgan Osborne
+ * @version 1.0
+ */
+
 public class Nemo {
 
 	private Image swim, swimming;
 	private int XLEFT = 0;
 	private int XRIGHT = 0;
-	private final int GRAVITY = 9;
-	private int yTop, yBottom, yAccel;
+	private final double GRAVITY = 0.25;
+	private double yTop, yBottom, yAccel;
+	private int swimCount;
+	
+	private final int NEMOWIDTH = 81;
+	private final int NEMOHEIGHT = 53;
+	private final int SWIMCOUNTMAX = 15;
 	
 	public Nemo()
 	{
 		swim = Toolkit.getDefaultToolkit().getImage(GameDriver.class.getResource("/SwimmyFish/resources/nemo.png"));
-		yTop = 500;
-		yBottom = 85;
-		XLEFT = 0;
-		XRIGHT = 80;
+		swimming = Toolkit.getDefaultToolkit().getImage(GameDriver.class.getResource("/SwimmyFish/resources/NemoSwimming.png"));
+		yTop = GameDriver.screenHeight/2 -50;
+		yBottom = yTop + NEMOHEIGHT;
+		XLEFT = GameDriver.screenWidth/2 - NEMOWIDTH;
+		XRIGHT = XLEFT + NEMOWIDTH;
+		yAccel = 0;
+		swimCount = 0;
 	}
 	
-	public Image getImage()
+	/*public boolean isPointOnFish(int x, int y)
 	{
-		return swim;
+		
+	}*/
+	
+	public Image getImage()
+	{	
+		return (swimCount > 0) ? swimming : swim;
 	}
 	
 	public int getXLeft()
@@ -37,26 +59,29 @@ public class Nemo {
 		return XRIGHT;
 	}
 	
-	public int getYTop()
+	public int getYTop()	
 	{
-		return yTop;
+		return (int)yTop;
 	}
 	
 	public int getYBottom()
 	{
-		return yBottom;
+		return (int)yBottom;
 	}
 	
 	public void updatePos()
 	{
-		XLEFT+=1;
-		XRIGHT+=1;
-		return;
+		yTop+=yAccel;
+		yBottom+=yAccel;
+		yAccel+=GRAVITY;
+		
+		if (swimCount > 0)
+			swimCount--;
 	}
 	
 	public void swim()
 	{
-		yTop-=10;
-		return;
+		yAccel -=8;
+		swimCount = SWIMCOUNTMAX;
 	}
 }
