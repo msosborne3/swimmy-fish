@@ -3,7 +3,9 @@ package SwimmyFish.objects;
 import java.awt.Image;
 import java.awt.Toolkit;
 
+
 import SwimmyFish.graphics.GameDriver;
+
 
 /**
  * Creates the fish and allows it to swim.
@@ -39,10 +41,48 @@ public class Nemo {
 		swimCount = 0;
 	}
 	
-	/*public boolean isPointOnFish(int x, int y)
+	public boolean isFish(int x, int y, int quadrant)
 	{
-		
-	}*/
+		// image center: NEMOWIDTH/2, NEMOHEIGHT/2
+		int xd =0;
+		int yd = 0;
+		int delta = 0;
+		switch(quadrant)
+		{
+		case 1:
+			// x units from the right side
+			// y units from the top
+			xd = NEMOWIDTH-x-NEMOWIDTH/2;
+			yd = NEMOHEIGHT/2-y;
+			delta = (int)Math.sqrt(Math.pow(xd, 2) + Math.pow(yd,2));
+			return delta <= 25 ? true : false; 
+		case 2:
+			// x units from left
+			// y units from top
+			xd = NEMOWIDTH/2-x;
+			yd = NEMOHEIGHT/2-y;
+			delta = (int)Math.sqrt(Math.pow(xd,2)+Math.pow(yd, 2));
+			return delta <= 15 ? true : false;
+
+		case 3:
+			// ********UNUSED********
+			// x units from left
+			// y units from bottom
+			xd = NEMOWIDTH/2-x;
+			yd = NEMOHEIGHT-y-NEMOHEIGHT/2;
+			delta = (int)Math.sqrt(Math.pow(xd,2)+Math.pow(yd, 2));
+			return delta <= 15 ? true : false;
+		case 4:
+			// x units from right
+			// y units from bottom
+			xd = NEMOWIDTH-x-NEMOWIDTH/2;
+			yd = NEMOHEIGHT-y-NEMOHEIGHT/2;
+			delta = (int)Math.sqrt(Math.pow(xd,2)+Math.pow(yd, 2));
+			return delta <= 35 ? true : false;
+		default:
+			return false;
+		}
+	}
 	
 	public Image getImage()
 	{	

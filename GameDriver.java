@@ -146,12 +146,16 @@ public class GameDriver extends JFrame {
 		if (nemo.getXRight()-4 >= coral.getULeft()
 				&& nemo.getXRight()-4 <= coral.getURight()
 				&& nemo.getYTop()+8 <= coral.getUBottom())
-			return true;
-		else if (nemo.getXLeft() >= coral.getULeft()
-				&& nemo.getXLeft() <= coral.getURight()
-				&& nemo.getYTop()+8 <= coral.getUBottom())
-			return true;
-		else if (nemo.getXLeft() <= coral.getULeft()
+			if (nemo.isFish(nemo.getXRight() - coral.getULeft(), coral.getUBottom() - nemo.getYTop(),1))
+				return true;
+		
+		if (nemo.getXLeft()-4 >= coral.getULeft()
+				&& nemo.getXLeft()-4 <= coral.getURight()
+				&& nemo.getYTop() <= coral.getUBottom())
+			if (nemo.isFish(coral.getURight()-nemo.getXLeft(), coral.getUBottom()-nemo.getYTop(), 2))		
+				return true;
+		
+		if (nemo.getXLeft() <= coral.getULeft()
 				&& nemo.getXRight()-4 >= coral.getURight()
 				&& nemo.getYTop()+8 <= coral.getUBottom())
 			return true;
@@ -170,12 +174,15 @@ public class GameDriver extends JFrame {
 		if (nemo.getXRight()-4 >= coral.getlLeft()
 				&& nemo.getXRight()-4 <= coral.getlRight()
 				&& nemo.getYBottom()-8 >= coral.getLTop())
-			return true;
-		else if (nemo.getXLeft() >= coral.getlLeft()
+			if (nemo.isFish(nemo.getXRight() - coral.getlLeft(), nemo.getYBottom()-coral.getLTop(), 4))
+				return true;
+	
+		if (nemo.getXLeft() >= coral.getlLeft()
 				&& nemo.getXLeft() <= coral.getlRight()
 				&& nemo.getYBottom()-8 >= coral.getLTop())
-			return true;
-		else if (nemo.getXLeft() <= coral.getlLeft()
+				return true;
+		
+		if (nemo.getXLeft() <= coral.getlLeft()
 				&& nemo.getXRight()-4 >= coral.getlRight()
 				&& nemo.getYBottom()-8 >= coral.getLTop())
 			return true;
