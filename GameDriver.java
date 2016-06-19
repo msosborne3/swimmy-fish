@@ -2,9 +2,12 @@ package SwimmyFish.graphics;
 
 import java.awt.BorderLayout;
 import java.awt.Canvas;
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.EventQueue;
+import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -12,6 +15,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.geom.AffineTransform;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -23,20 +27,22 @@ import java.util.Deque;
 import java.util.Random;
 
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Renderer;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import SwimmyFish.objects.*;
 import java.awt.Dimension;
 
+@SuppressWarnings("serial")
 public class GameDriver extends JFrame {
 	
 	private enum GameState {Menu, Tutorial, Gameplay, Paused, Gameover}	// All possible gamestates
 	private GameState gameState; // represents the current state of the game
 	
-	private JPanel contentPane;
-	private final SFCanvas canvas = new SFCanvas();
+	private SFPanel contentPane;
 	private SFActionListener timerListener;
 	private SFKeyListener keyListener;
 	private Timer timer;
@@ -45,9 +51,10 @@ public class GameDriver extends JFrame {
 	private Deque<CoralObstacle> coralDeque; // holds all the obstacles on screen
 	private HighScore highScore;
 	private int score; // score for the current game
+	private Deque<OceanFloor> oceanFloors; // oceanFloor objects
 	
-	private final int GAMESPEED = 30; // 3000 ms = 3 s
-	private final int NUMOBSTACLEHEIGHTS = 4;
+	private final int GAMESPEED = 20; // 3000 ms = 3 s
+	private final int NUMOBSTACLEHEIGHTS = 2;
 	
 	//public static fields
 	public static final int screenWidth = 500;
@@ -65,7 +72,7 @@ public class GameDriver extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					GameDriver frame = new GameDriver();
+					GameDriver frame = new  GameDriver();
 					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -78,28 +85,26 @@ public class GameDriver extends JFrame {
 	 * Initializes JFrame and all variables/components.
 	 */
 	public GameDriver() {
+		getContentPane().setFont(new Font("Arial", Font.PLAIN, 11));
 		setIconImage(Toolkit.getDefaultToolkit().getImage(GameDriver.class.getResource("/SwimmyFish/resources/nemo.png")));
 		setResizable(false);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 516, 639);
-		contentPane = new JPanel();
+		setBounds(350, 50, 500, 600); // 516, 639
+		contentPane = new SFPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(new BorderLayout(0, 0));
-		canvas.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-		contentPane.add(canvas, BorderLayout.CENTER);
 		
 		gameState = GameState.Menu; // start the game at the menu
 		timerListener = new SFActionListener(); // initialize our defined Timer
 		timer = new Timer(GAMESPEED, timerListener); // set for 3 second intervals - I think
-		rand = new Random(NUMOBSTACLEHEIGHTS); // set for 4 different heights
-		newNemo(); // initialize player
+		rand = new Random();
 		coralDeque = new ArrayDeque<CoralObstacle>();
+		oceanFloors = new ArrayDeque<OceanFloor>(); 
 		importHighScore(); // attempt to import high score
-		score = 0;
 		keyListener = new SFKeyListener(); // initialize our keylistener
-		canvas.addKeyListener(keyListener); // listen for key events in canvas
-		canvas.setFocusable(true); // gives focus to the canvas - so we dont need to click on it for it to accept input
+		contentPane.addKeyListener(keyListener); // listen for keyevents
+		contentPane.setFocusable(true); // give focus to the contentPane - so we can 'hear' key events
 	}
 	
 	/**
@@ -114,7 +119,7 @@ public class GameDriver extends JFrame {
 		if (nemo.getYTop() <= 0)
 			return true;
 		// check for collision with floor
-		if (nemo.getYBottom() >= screenHeight)
+		if (nemo.getYBottom() >= screenHeight-125)
 			return true;
 		// check for collision with each of the obstacles
 		for (CoralObstacle coral : coralDeque)
@@ -125,7 +130,7 @@ public class GameDriver extends JFrame {
 			if (checkLowerCoral(coral))
 				return true;
 		}
-			
+
 		// no collision detected
 		return false;
 	}
@@ -138,9 +143,17 @@ public class GameDriver extends JFrame {
 	 */
 	private boolean checkUpperCoral(CoralObstacle coral)
 	{
-		if (nemo.getXRight() >= coral.getULeft() 
-				&& nemo.getXRight() <= coral.getURight()
-				&& nemo.getYTop() <= coral.getUBottom())
+		if (nemo.getXRight()-4 >= coral.getULeft()
+				&& nemo.getXRight()-4 <= coral.getURight()
+				&& nemo.getYTop()+8 <= coral.getUBottom())
+			return true;
+		else if (nemo.getXLeft() >= coral.getULeft()
+				&& nemo.getXLeft() <= coral.getURight()
+				&& nemo.getYTop()+8 <= coral.getUBottom())
+			return true;
+		else if (nemo.getXLeft() <= coral.getULeft()
+				&& nemo.getXRight()-4 >= coral.getURight()
+				&& nemo.getYTop()+8 <= coral.getUBottom())
 			return true;
 		
 		return false;
@@ -154,9 +167,17 @@ public class GameDriver extends JFrame {
 	 */
 	private boolean checkLowerCoral(CoralObstacle coral)
 	{
-		if (nemo.getXRight() >= coral.getlLeft()
-				&& nemo.getXRight() <= coral.getlRight()
-				&& nemo.getYBottom() >= coral.getLTop())
+		if (nemo.getXRight()-4 >= coral.getlLeft()
+				&& nemo.getXRight()-4 <= coral.getlRight()
+				&& nemo.getYBottom()-8 >= coral.getLTop())
+			return true;
+		else if (nemo.getXLeft() >= coral.getlLeft()
+				&& nemo.getXLeft() <= coral.getlRight()
+				&& nemo.getYBottom()-8 >= coral.getLTop())
+			return true;
+		else if (nemo.getXLeft() <= coral.getlLeft()
+				&& nemo.getXRight()-4 >= coral.getlRight()
+				&& nemo.getYBottom()-8 >= coral.getLTop())
 			return true;
 		
 		return false;
@@ -171,6 +192,8 @@ public class GameDriver extends JFrame {
 		
 		for (CoralObstacle coral: coralDeque)
 			coral.updatePos();
+		for (OceanFloor floor: oceanFloors)
+			floor.updatePos();
 	}
 	
 	/**
@@ -187,11 +210,31 @@ public class GameDriver extends JFrame {
 	}
 	
 	/**
-	 * Stores a new Nemo object in nemo
+	 * Creates a new Nemo object
+	 * Removes all elements in coralDeque
+	 * Changes gameState to Gameplay
+	 * Restarts the timer
 	 */
-	private void newNemo()
+	private void startNewGame()
 	{
+		//create new player
 		nemo = new Nemo();
+		//reset score
+		score = 0;
+		// remove all coralObstacles from deque
+		while(coralDeque.size() > 0)
+			coralDeque.removeLast();
+		
+		//remove all oceanFloors from deque
+		while(oceanFloors.size() > 0)
+			oceanFloors.removeLast();
+		
+		// create initial ocean floor instance
+		oceanFloors.addFirst(new OceanFloor());
+		//change the GameState
+		gameState = GameState.Gameplay;
+		//start the timer
+		timer.restart();	
 	}
 	
 	/**
@@ -246,7 +289,7 @@ public class GameDriver extends JFrame {
 	private class SFActionListener implements ActionListener
 	{
 		private int numTicks = 0;
-		private final int TIMEBETWEENOBSTACLES = 200;
+		private final int TIMEBETWEENOBSTACLES = 250;
 		
 		
 		/**
@@ -258,34 +301,60 @@ public class GameDriver extends JFrame {
 			updateObjectPositions();
 			// update score
 			updateScore();
-			// remove corals off screen - it will save us several checks later
+			// remove corals off screen
 			removeOffScreenCorals();
-			
+			// remove ocean floors off screen
+			removeOffScreenOceanFloors();
 			// repaint the screen
-			canvas.repaint();
+			contentPane.repaint();
 			
 			// spawn new obstacle of random height - every x seconds
 			if (numTicks % TIMEBETWEENOBSTACLES == 0)
-				coralDeque.addFirst(new CoralObstacle());
+				createNewObstacle();
+			
+			for (OceanFloor floor: oceanFloors)
+				if (floor.getLeft() == 0)
+					createNewOceanFloor();
 			
 			// check for any collisions
 			if (collisionDetection())
 			{
-				gameState = GameState.Gameover; // The player lost - gameover
-				timer.stop(); // stop the timer
-				highScore.updateHighScore(score); // see if they got a new high score
-				saveHighScore();
-				numTicks = 0; // reset the counter
-				
+				endGame();
+				numTicks = -1; // reset the counter
 				System.out.println("Collision Detected");
 			}
-			
-			//System.out.println("Tick Tock");
-			
 			numTicks++; // update the tick counter
 		}
 	}
 	
+	/**
+	 * Ends the current game and
+	 */
+	private void endGame()
+	{
+		gameState = GameState.Gameover; // The player lost - gameover
+		timer.stop(); // stop the timer
+		highScore.updateHighScore(score); // see if they got a new high score
+		saveHighScore();
+	}
+	
+	/*
+	 * Creates a new coralObstacle instance
+	 * and stores it in coralDeque.
+	 */
+	private void createNewObstacle()
+	{
+		coralDeque.addFirst(new CoralObstacle(rand.nextInt(NUMOBSTACLEHEIGHTS), rand.nextInt(2)));
+	}
+	
+	/**
+	 * Creates a new OceanFloor instance
+	 * and stores it in oceanFloors
+	 */
+	private void createNewOceanFloor()
+	{
+		oceanFloors.addFirst(new OceanFloor(500));
+	}
 	/**
 	 * Deletes the last coralObstacle in coralDeque if
 	 * it is off screen.
@@ -299,6 +368,16 @@ public class GameDriver extends JFrame {
 	}	
 	
 	/**
+	 * Deletes the last OceanFloor in oceanFloors if
+	 * it is off screen
+	 */
+	private void removeOffScreenOceanFloors()
+	{
+		if (oceanFloors.size() > 0 &&
+				oceanFloors.peekLast().getRight() < 0)
+			oceanFloors.removeLast();
+	}
+	/**
 	 * Handles key events
 	 */
 	private class SFKeyListener implements KeyListener
@@ -311,21 +390,26 @@ public class GameDriver extends JFrame {
 			case Menu:
 				if (arg0.getKeyCode() == KeyEvent.VK_SPACE)
 				{
-					gameState = GameState.Gameplay;
-					timer.start();
+					startNewGame();
 				}
 				else if (arg0.getKeyCode() == KeyEvent.VK_T)
+				{
 					gameState = GameState.Tutorial;
+					contentPane.repaint();
+				}
 				break;
 			case Gameplay:
 				// Press space to swim & press p to pause
-				if (arg0.getKeyCode() == KeyEvent.VK_SPACE)
+				if (arg0.getKeyCode() == KeyEvent.VK_SPACE){
 					nemo.swim();
+				}
 				else if (arg0.getKeyCode() == KeyEvent.VK_P)
 				{
 					// pause game
 					timer.stop();
 					gameState = GameState.Paused;
+					// repaint panel
+					contentPane.repaint();
 				}
 				
 				break;
@@ -344,22 +428,20 @@ public class GameDriver extends JFrame {
 				if (arg0.getKeyCode() == KeyEvent.VK_SPACE // space
 				|| arg0.getKeyCode() == KeyEvent.VK_ESCAPE // esc
 				|| arg0.getKeyCode() == KeyEvent.VK_B) // b
+				{
 					gameState = GameState.Menu;
+					contentPane.repaint();
+				}
 				break;
 			case Gameover:
 				// Pressing space restarts the game
 				if (arg0.getKeyCode() == KeyEvent.VK_SPACE)
-				{
-					gameState = GameState.Gameplay;
-					while (!coralDeque.isEmpty()) // remove all coral objects
-						coralDeque.removeLast(); // removeLast == removeFirst for this purpose
-					newNemo(); // create a new nemo object
-					timer.restart();
-				}
+					startNewGame();
 				break;
 			default:
 				// fail safe
 				gameState = GameState.Menu;
+				contentPane.repaint();
 				break;
 			}
 		}
@@ -378,18 +460,116 @@ public class GameDriver extends JFrame {
 		
 	}
 	
-	private class SFCanvas extends Canvas
+	
+	private class SFPanel extends JPanel
 	{
-		
 		@Override
-		public void paint(Graphics g)
+		public void paintComponent(Graphics g)
 		{
-			Image bg = Toolkit.getDefaultToolkit().getImage(GameDriver.class.getResource("/SwimmyFish/resources/background.png"));
-			g.drawImage(bg, 0, 0, this);
-			g.drawImage(nemo.getImage(), nemo.getXLeft(), nemo.getYTop(), this);
+			switch (gameState) {
 			
-			for (CoralObstacle coral: coralDeque)
+			case Menu:
+				
+				Image bg = Toolkit.getDefaultToolkit()
+						.getImage(GameDriver.class.getResource("/SwimmyFish/resources/MainMenu.png"));
+				g.drawImage(bg, 0, 0, this);
+				
+				g.setFont(new Font("Helvetica Neue", Font.PLAIN, 20));
+				g.drawString(String.valueOf("High Score: " + highScore.getHighScore()),
+						screenWidth/2 - 65, 360);
+				break;
+
+			case Tutorial:
+
+				// This needs a new image (tutorial)
+				Image howToPlay = Toolkit.getDefaultToolkit()
+						.getImage(GameDriver.class.getResource("/SwimmyFish/resources/HowToPlay.png"));
+				g.drawImage(howToPlay, 0, 0, this);
+				g.setFont(new Font("Helvetica Neue", Font.PLAIN, 20));
+				g.drawString("Press 'b' to go back.", screenWidth/2 - 90, 135);
+				g.drawString("Press 'p' to pause.", screenWidth/2 - 75, screenHeight/2-13);
+				
+				break;
+
+			case Gameplay:
+				Image bg1 = Toolkit.getDefaultToolkit()
+						.getImage(GameDriver.class.getResource("/SwimmyFish/resources/background.png"));
+				g.drawImage(bg1, 0, 0, this);
+				
+				drawFloors(g);
+				drawNemo(g);
+				drawCorals(g);
+				
+				//display score
+				g.setFont(new Font("Helvetica Neue", Font.PLAIN, 60));
+				g.drawString(String.valueOf(score), 15, 50);
+				break;
+
+			case Paused:
+				Image bg2 = Toolkit.getDefaultToolkit()
+						.getImage(GameDriver.class.getResource("/SwimmyFish/resources/background.png"));
+				g.drawImage(bg2, 0, 0, this);
+				
+				drawFloors(g);
+				drawNemo(g);
+				drawCorals(g);
+
+				g.setFont(new Font("Helvetica Neue", Font.PLAIN, 60));
+				g.drawString("Paused", screenWidth/2 - 100, screenHeight/2);
+				g.setFont(new Font("Helvetica Neue", Font.PLAIN,20));
+				g.drawString("Press 'p' to continue", screenWidth/2-87, screenHeight/2+50);
+				break;
+
+			case Gameover:
+				Image bg3 = Toolkit.getDefaultToolkit()
+						.getImage(GameDriver.class.getResource("/SwimmyFish/resources/GameOver.png"));
+				g.drawImage(bg3, 0, 0, this);
+
+				drawFloors(g);
+				drawNemo(g);
+				drawCorals(g);
+				
+				g.setFont(new Font("Helvetica Neue", Font.PLAIN, 20));
+				g.drawString(String.valueOf(score), screenWidth/2-5, screenHeight/2-42);
+				g.drawString(String.valueOf(highScore.getHighScore()), screenWidth/2-10, screenHeight/2+8);
+				break;
+			default:
+				break;
+			}
+			g.dispose();
+		}
+		
+		/**
+		 * Draws nemo at its current position
+		 * @param Graphics g
+		 */
+		private void drawNemo(Graphics g)
+		{
+			g.drawImage(nemo.getImage(), nemo.getXLeft(), nemo.getYTop(), this);
+		}
+		
+		/**
+		 * Draws all the corals in coralDeque
+		 * at their current location
+		 * @param Grapihcs g
+		 */
+		private void drawCorals(Graphics g)
+		{
+			
+
+			for(CoralObstacle coral: coralDeque)
+			{
+				// bottom
 				g.drawImage(coral.getLowerImage(), coral.getlLeft(), coral.getLTop(), this);
+				//top
+				g.drawImage(coral.getUpperImage(), coral.getULeft(), coral.getUTop(), this);
+			}
+		}
+		
+		private void drawFloors(Graphics g)
+		{
+			for (OceanFloor floor: oceanFloors)
+				g.drawImage(floor.getImage(), floor.getLeft(), floor.getTop(), this);
 		}
 	}
 	
